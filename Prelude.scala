@@ -11,7 +11,7 @@ object Prelude {
   trait Applicative[F[_]] extends Functor[F] {
     def pure[A](a: A): F[A]
     def joinWith[A, B, Z](fa: F[A], fb: F[B])(f: (A, B) => Z): F[Z]
-    def sequence[A, Z](fas: Seq[F[A]])(f: Seq[A] => Z): F[Z] = throw new RuntimeException("TODO")
+    def sequence[A, Z](fas: Seq[F[A]])(f: Seq[A] => Z): F[Z]
   }
 
   trait Monad[F[_]] extends Applicative[F] {
@@ -238,34 +238,128 @@ object Prelude {
       } yield b
   }
 
-  sealed trait Op[F[_], Z] {
-    def interp[G[_]](monad: Monad[G], natTrans: NatTrans[F, G]): G[Z] =
+  sealed trait FunctorOp[F[_], Z] extends ApplicativeOp[F, Z] {
+    def interpret(functor: Functor[F]): F[Z] =
       this match {
-        case Pure(fz) =>
-          natTrans.trans(fz)
         case FMap(fa, f) =>
-          monad.fmap(natTrans.trans(fa))(f)
-        case JoinWith(fa, fb, f) =>
-          monad.joinWith(natTrans.trans(fa), natTrans.trans(fb))(f)
-        case Sequence(fas, f) =>
-          monad.sequence(fas map { natTrans.trans(_) })(f)
-        case Bind(fi, f) =>
-          monad.bind(natTrans.trans(fi)) { i =>
-            val fz = f(i)
-            natTrans.trans(fz)
-          }
+          functor.fmap(fa)(f)
+      }
+
+    override def transform[G[_]](natTrans: NatTrans[F, G]): FunctorOp[G, Z] =
+      this match {
+        case FMap(fa, f) =>
+          FMap(natTrans.trans(fa), f)
       }
   }
-  case class Pure[F[_], Z](fz: F[Z]) extends Op[F, Z]
-  case class FMap[F[_], A, Z](fa: F[A], f: A => Z) extends Op[F, Z]
-  case class JoinWith[F[_], A, B, Z](fa: F[A], fb: F[B], f: (A, B) => Z) extends Op[F, Z]
-  case class Sequence[F[_], A, B, Z](fas: Seq[F[A]], f: Seq[A] => Z) extends Op[F, Z]
-  case class Bind[F[_], I, Z](fi: F[I], f: I => F[Z]) extends Op[F, Z]
 
-  //class OpMonad[F[_]](applicative: Applicative[F]) extends Functor[({type L[A] = Op[F, A]})#L] {
+  sealed trait ApplicativeOp[F[_], Z] extends MonadOp[F, Z] {
+    def interpret(applicative: Applicative[F]): F[Z] =
+      this match {
+        case FMap(fa, f) =>
+          applicative.fmap(fa)(f)
+        case Pure(fz) =>
+          fz
+        case JoinWith(fa, fb, f) =>
+          applicative.joinWith(fa, fb)(f)
+        case Sequence(fas, f) =>
+          applicative.sequence(fas)(f)
+      }
+
+    override def transform[G[_]](natTrans: NatTrans[F, G]): ApplicativeOp[G, Z] =
+      this match {
+        case FMap(fa, f) =>
+          FMap(natTrans.trans(fa), f)
+        case Pure(fz) =>
+          Pure(natTrans.trans(fz))
+        case JoinWith(fa, fb, f) =>
+          JoinWith(natTrans.trans(fa), natTrans.trans(fb), f)
+        case Sequence(fas, f) =>
+          Sequence(fas map { natTrans.trans(_) }, f)
+      }
+  }
+
+  sealed trait MonadOp[F[_], Z] {
+    def interpret(monad: Monad[F]): F[Z] =
+      this match {
+        case FMap(fa, f) =>
+          monad.fmap(fa)(f)
+        case Pure(fz) =>
+          fz
+        case JoinWith(fa, fb, f) =>
+          monad.joinWith(fa, fb)(f)
+        case Sequence(fas, f) =>
+          monad.sequence(fas)(f)
+        case Bind(fi, f) =>
+          monad.bind(fi)(f)
+      }
+
+    def transform[G[_]](natTrans: NatTrans[F, G]): MonadOp[G, Z] =
+      this match {
+        case FMap(fa, f) =>
+          FMap(natTrans.trans(fa), f)
+        case Pure(fz) =>
+          Pure(natTrans.trans(fz))
+        case JoinWith(fa, fb, f) =>
+          JoinWith(natTrans.trans(fa), natTrans.trans(fb), f)
+        case Sequence(fas, f) =>
+          Sequence(fas map { natTrans.trans(_) }, f)
+        case Bind(fi, f) =>
+          Bind(natTrans.trans(fi), { (i: Any) =>  // erasure...
+            val fz = f(i)
+            natTrans.trans(fz)
+          })
+      }
+  }
+  case class FMap[F[_], A, Z](fa: F[A], f: A => Z) extends FunctorOp[F, Z]
+  case class Pure[F[_], Z](fz: F[Z]) extends ApplicativeOp[F, Z]
+  case class JoinWith[F[_], A, B, Z](fa: F[A], fb: F[B], f: (A, B) => Z) extends ApplicativeOp[F, Z]
+  case class Sequence[F[_], A, B, Z](fas: Seq[F[A]], f: Seq[A] => Z) extends ApplicativeOp[F, Z]
+  case class Bind[F[_], I, Z](fi: F[I], f: I => F[Z]) extends MonadOp[F, Z]
+
+  type Lazy[X] = Reader[Unit, X]
+
+  type ReaderT[R, F[_], X] = R => F[X]
+
+  type LazyT[F[_], X] = ReaderT[Unit, F, X]
+
+  class ReaderTFunctor[R, F[_]](
+    functor: Functor[F]
+  ) extends Functor[({type L[A] = ReaderT[R, F, A]})#L] {
+    override def fmap[A, B](fa: ReaderT[R, F, A])(f: A => B): ReaderT[R, F, B] = { (r: R) =>
+      functor.fmap(fa(r))(f)
+    }
+  }
+
+  class ReaderTApplicative[R, F[_]](
+    applicative: Applicative[F]
+  ) extends ReaderTFunctor[R, F](applicative) with Applicative[({type L[A] = ReaderT[R, F, A]})#L] {
+    override def pure[A](a: A): ReaderT[R, F, A] = { (_: R) => applicative.pure(a) }
+    override def joinWith[A, B, Z](fa: ReaderT[R, F, A], fb: ReaderT[R, F, B])(f: (A, B) => Z): ReaderT[R, F, Z] = { (r: R) =>
+      val ga = fa(r)
+      val gb = fb(r)
+      applicative.joinWith(ga, gb)(f)
+    }
+    override def sequence[A, Z](fas: Seq[ReaderT[R, F, A]])(f: Seq[A] => Z): ReaderT[R, F, Z] = { (r: R) =>
+      val gas = fas map { _(r) }
+      applicative.sequence(gas)(f)
+    }
+  }
+
+  class ReaderTMonad[R, F[_]](
+    monad: Monad[F]
+  ) extends ReaderTApplicative[R, F](monad) with Monad[({type L[A] = ReaderT[R, F, A]})#L] {
+    override def bind[A, Z](fa: ReaderT[R, F, A])(f: A => ReaderT[R, F, Z]): ReaderT[R, F, Z] = { (r: R) =>
+      val ga = fa(r)
+      monad.bind(ga) { (a: A) => f(a)(r) }
+    }
+  }
+
+  //class OpMonad[F[_]](monad: Monad[F]) extends Applicative[({type L[A] = Op[F, A]})#L] {
+  //  private[this] val fTransId = transId[F]
   //  override def fmap[A, B](fa: Op[F, A])(f: A => B): Op[F, B] = FMap(fa, f)
-  //  //override def pure[A, B](a: A): Op[F, A] = Pure(applicative.pure(a))
-  //  //override def joinWith[A, B](fa: Op[F, A], fb: Op[F, B])(f: (A, B) => Z): Op[F, Z] = JoinWith(fa, fb, f)
+  //  override def pure[A, B](a: A): Op[F, A] = Pure(monad.pure(a))
+  //  override def joinWith[A, B](fa: Op[F, A], fb: Op[F, B])(f: (A, B) => Z): Op[F, Z] =
+  //    JoinWith(fa.interpret(monad), fb.interpret(monad), f)
   //  //override def bind[A, B](fa: Op[F, A])(f: A => Op[F, B]): Op[F, B] = Bind(fa, f)
   //}
 
