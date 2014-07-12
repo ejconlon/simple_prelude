@@ -1,5 +1,6 @@
-import scala.language.higherKinds
+package simple_prelude
 
+import scala.language.higherKinds
 import scala.util.{Try, Success, Failure}
 
 object Prelude {
