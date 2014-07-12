@@ -1,6 +1,8 @@
 import scala.language.higherKinds
 
-object Free {
+import scala.util.{Try, Success, Failure}
+
+object Prelude {
 
   trait Functor[F[_]] {
     def fmap[A, B](fa: F[A])(f: A => B): F[B]
@@ -167,7 +169,6 @@ object Free {
       }
   }
 
-  import scala.util.{Try, Success, Failure}
   class TryMonad extends Monad[Try] {
     override def fmap[A, B](fa: Try[A])(f: A => B): Try[B] =
       fa match {
