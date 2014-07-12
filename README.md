@@ -1,7 +1,7 @@
 simple_prelude
 ==============
 
-A simple Prelude for Scala containing standard typeclasses, instances, lenses, and more.
+A Prelude for Scala containing standard typeclasses, instances, lenses, and more.  Not really simple.
 
-Emphasis on simplicity, clarity, and implicit-agnosticism.  (Thanks to the lack of newtypes
+Emphasis on clarity, applicatives, and implicit-agnosticism.  (Thanks to the lack of newtypes
 implicit resolution in Scala is... less than ideal.)

@@ -322,6 +322,15 @@ object Prelude {
 
   type LazyT[F[_], X] = ReaderT[Unit, F, X]
 
+  //trait MonadTrans[T[_[_], _]] {
+  //  def lift[M[_], A](monad: Monad[M])(m: M[A]): T[M, A]
+  //}
+
+  // ???
+  //class ReaderTMonadTrans[R] extends MonadTrans[({type L[F[_], A] = ReaderT[R, F, A]})#L] {
+  //  override def lift[M[_], A](monad: Monad[M])(m: M[A]): ReaderT[R, M, A] = { (_: R) => m }
+  //}
+
   class ReaderTFunctor[R, F[_]](
     functor: Functor[F]
   ) extends Functor[({type L[A] = ReaderT[R, F, A]})#L] {
@@ -354,12 +363,15 @@ object Prelude {
     }
   }
 
-  //class OpMonad[F[_]](monad: Monad[F]) extends Applicative[({type L[A] = Op[F, A]})#L] {
+  //class OpFunctor[F[_]](functor: Functor[F]) extends Functor[({type L[A] = Op[LazyT[F], A]})#L] {
   //  private[this] val fTransId = transId[F]
-  //  override def fmap[A, B](fa: Op[F, A])(f: A => B): Op[F, B] = FMap(fa, f)
-  //  override def pure[A, B](a: A): Op[F, A] = Pure(monad.pure(a))
-  //  override def joinWith[A, B](fa: Op[F, A], fb: Op[F, B])(f: (A, B) => Z): Op[F, Z] =
-  //    JoinWith(fa.interpret(monad), fb.interpret(monad), f)
+  //  private[this] val lazyTFunctor = new ReaderTFunctor[Unit, F](functor)
+  //  override def fmap[A, B](fa: Op[LazyT[F], A])(f: A => B): Op[LazyT[F], B] = {
+  //    FMap(fa, f)
+  //  }
+  //  //override def pure[A, B](a: A): Op[F, A] = Pure(monad.pure(a))
+  //  //override def joinWith[A, B](fa: Op[F, A], fb: Op[F, B])(f: (A, B) => Z): Op[F, Z] =
+  //  //  JoinWith(fa.interpret(monad), fb.interpret(monad), f)
   //  //override def bind[A, B](fa: Op[F, A])(f: A => Op[F, B]): Op[F, B] = Bind(fa, f)
   //}
 
