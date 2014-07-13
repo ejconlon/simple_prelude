@@ -25,12 +25,12 @@ object OptionMonad extends Monad[Option] {
 class OptionTMonad[M[_]](monad: Monad[M]) extends Monad[({type L[A] = OptionT[M, A]})#L] {
   override def fmap[A, B](fa: OptionT[M, A])(f: A => B): OptionT[M, B] =
     monad.fmap(fa) { oa => OptionMonad.fmap(oa)(f) }
-  def pure[A](a: A): OptionT[M, A] = monad.pure(OptionMonad.pure(a))
-  def joinWith[A, B, Z](fa: OptionT[M, A], fb: OptionT[M, B])(f: (A, B) => Z): OptionT[M, Z] =
+  override def pure[A](a: A): OptionT[M, A] = monad.pure(OptionMonad.pure(a))
+  override def joinWith[A, B, Z](fa: OptionT[M, A], fb: OptionT[M, B])(f: (A, B) => Z): OptionT[M, Z] =
     monad.joinWith(fa, fb) { case (oa, ob) => OptionMonad.joinWith(oa, ob)(f) }
-  def sequence[A, Z](fas: Seq[OptionT[M, A]])(f: Seq[A] => Z): OptionT[M, Z] =
+  override def sequence[A, Z](fas: Seq[OptionT[M, A]])(f: Seq[A] => Z): OptionT[M, Z] =
     monad.sequence(fas) { oas => OptionMonad.sequence(oas)(f) }
-  def bind[A, B](fa: OptionT[M, A])(f: A => OptionT[M, B]): OptionT[M, B] =
+  override def bind[A, B](fa: OptionT[M, A])(f: A => OptionT[M, B]): OptionT[M, B] =
     monad.bind(fa) { oa =>
       oa match {
         case None => monad.pure(None)

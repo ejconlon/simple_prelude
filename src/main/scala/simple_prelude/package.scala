@@ -23,6 +23,8 @@ package object simple_prelude {
 
   type TryT[M[_], X] = M[Try[X]]
 
+  type SeqT[M[_], X] = M[Seq[X]]
+
   type Reader[R, A] = R => A
 
   type Writer[W, A] = (A, W)
