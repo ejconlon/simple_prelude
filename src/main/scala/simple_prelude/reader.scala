@@ -21,32 +21,20 @@ class ReaderMonad[R] extends Monad[({type L[A] = Reader[R, A]})#L] {
   }
 }
 
-class ReaderTFunctor[R, F[_]](
-  functor: Functor[F]
-) extends Functor[({type L[A] = ReaderT[R, F, A]})#L] {
+class ReaderTMonad[R, F[_]](monad: Monad[F]) extends Monad[({type L[A] = ReaderT[R, F, A]})#L] {
   override def fmap[A, B](fa: ReaderT[R, F, A])(f: A => B): ReaderT[R, F, B] = { (r: R) =>
-    functor.fmap(fa(r))(f)
+    monad.fmap(fa(r))(f)
   }
-}
-
-class ReaderTApplicative[R, F[_]](
-  applicative: Applicative[F]
-) extends ReaderTFunctor[R, F](applicative) with Applicative[({type L[A] = ReaderT[R, F, A]})#L] {
-  override def pure[A](a: A): ReaderT[R, F, A] = { (_: R) => applicative.pure(a) }
+  override def pure[A](a: A): ReaderT[R, F, A] = { (_: R) => monad.pure(a) }
   override def joinWith[A, B, Z](fa: ReaderT[R, F, A], fb: ReaderT[R, F, B])(f: (A, B) => Z): ReaderT[R, F, Z] = { (r: R) =>
     val ga = fa(r)
     val gb = fb(r)
-    applicative.joinWith(ga, gb)(f)
+    monad.joinWith(ga, gb)(f)
   }
   override def sequence[A, Z](fas: Seq[ReaderT[R, F, A]])(f: Seq[A] => Z): ReaderT[R, F, Z] = { (r: R) =>
     val gas = fas map { _(r) }
-    applicative.sequence(gas)(f)
+    monad.sequence(gas)(f)
   }
-}
-
-class ReaderTMonad[R, F[_]](
-  monad: Monad[F]
-) extends ReaderTApplicative[R, F](monad) with Monad[({type L[A] = ReaderT[R, F, A]})#L] {
   override def bind[A, Z](fa: ReaderT[R, F, A])(f: A => ReaderT[R, F, Z]): ReaderT[R, F, Z] = { (r: R) =>
     val ga = fa(r)
     monad.bind(ga) { (a: A) => f(a)(r) }

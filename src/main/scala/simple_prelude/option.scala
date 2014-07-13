@@ -21,3 +21,5 @@ class OptionMonad extends Monad[Option] {
       b <- f(a)
     } yield b
 }
+
+class OptionTFunctor[F[_]](functor: Functor[F]) 

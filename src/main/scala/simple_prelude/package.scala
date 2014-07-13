@@ -1,3 +1,7 @@
+import scala.language.higherKinds
+
+import scala.util.Try
+
 package object simple_prelude {
   type Identity[A] = A
 
@@ -7,6 +11,18 @@ package object simple_prelude {
 
   type CoKleisli[W[_], A, B] = W[A] => B
 
+  type ReaderT[R, M[_], X] = R => M[X]
+
+  type WriterT[W, M[_], X] = M[(X, W)]
+
+  type StateT[S, M[_], X] = S => M[(X, S)]
+
+  type OptionT[M[_], X] = M[Option[X]]
+
+  type EitherT[E, M[_], X] = M[Either[E, X]]
+
+  type TryT[M[_], X] = M[Try[X]]
+
   type Reader[R, A] = R => A
 
   type Writer[W, A] = (A, W)
@@ -14,8 +30,6 @@ package object simple_prelude {
   type State[S, A] = S => (A, S)
 
   type Susp[X] = Reader[Unit, X]
-
-  type ReaderT[R, F[_], X] = R => F[X]
 
   type SuspT[F[_], X] = ReaderT[Unit, F, X]
 
