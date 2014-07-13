@@ -2,6 +2,8 @@ package simple_prelude
 
 import scala.language.higherKinds
 
+// "Free" Functors, Applicatives, and Monads
+
 sealed trait FunctorOp[F[_], Z] extends ApplicativeOp[F, Z] {
   def interpret(functor: Functor[F]): F[Z] =
     this match {

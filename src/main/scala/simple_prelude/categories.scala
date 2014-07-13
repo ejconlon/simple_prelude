@@ -2,7 +2,7 @@ package simple_prelude
 
 import scala.language.higherKinds
 
-class FunctionCategory extends Category[Function1] {
+object FunctionCategory extends Category[Function1] {
   override def id[A]: A => A = { (a: A) => a }
   override def andThen[A, B, C](x: A => B, y: B => C): A => C = x andThen y
 }

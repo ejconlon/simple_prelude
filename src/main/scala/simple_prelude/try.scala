@@ -4,7 +4,7 @@ import scala.language.higherKinds
 
 import scala.util.{Failure, Success, Try}
 
-class TryMonad extends Monad[Try] {
+object TryMonad extends Monad[Try] {
   override def fmap[A, B](fa: Try[A])(f: A => B): Try[B] =
     fa match {
       case l@Failure(_) => l.asInstanceOf[Try[B]]
