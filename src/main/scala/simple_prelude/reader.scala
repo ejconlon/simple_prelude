@@ -40,3 +40,8 @@ class ReaderTMonad[R, F[_]](monad: Monad[F]) extends Monad[({type L[A] = ReaderT
     monad.bind(ga) { (a: A) => f(a)(r) }
   }
 }
+
+class ReaderTMonadTrans[R] extends MonadTrans[({type L[F[_], A] = ReaderT[R, F, A]})#L] {
+  override def lift[M[_], A](monad: Monad[M], m: M[A]): ReaderT[R, M, A] = { (_: R) => m }
+  override def liftClass[M[_]](monad: Monad[M]): ReaderTMonad[R, M] = new ReaderTMonad[R, M](monad)
+}

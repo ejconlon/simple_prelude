@@ -22,3 +22,11 @@ class WriterMonad[W](monoid: Monoid[W]) extends WriterFunctor[W] with Monad[({ty
     (b, monoid.plus(fa._2, v))
   }
 }
+
+abstract class WriterTMonad[W, M[_]](
+  monoid: Monoid[W],
+  monad: Monad[M]
+) extends ComposeApplicative[({type L[A] = Writer[W, A]})#L, M](new WriterMonad[W](monoid), monad)
+  with Monad[({type L[A] = WriterT[W, M, A]})#L] {
+  override def bind[A, B](fa: WriterT[W, M, A])(f: A => WriterT[W, M, B]): WriterT[W, M, B]
+}

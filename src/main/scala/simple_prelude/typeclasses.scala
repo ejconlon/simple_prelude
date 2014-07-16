@@ -40,3 +40,7 @@ trait Comonad[W[_]] extends Functor[W] {
   def extend[A, B](wa: W[A])(f: W[A] => B): W[B]
 }
 
+trait MonadTrans[T[_[_], _]] {
+  def lift[M[_], A](monad: Monad[M], m: M[A]): T[M, A]
+  def liftClass[M[_]](monad: Monad[M]): Monad[({type L[A] = T[M, A]})#L]
+}

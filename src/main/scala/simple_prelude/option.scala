@@ -22,14 +22,10 @@ object OptionMonad extends Monad[Option] {
     } yield b
 }
 
-class OptionTMonad[M[_]](monad: Monad[M]) extends Monad[({type L[A] = OptionT[M, A]})#L] {
-  override def fmap[A, B](fa: OptionT[M, A])(f: A => B): OptionT[M, B] =
-    monad.fmap(fa) { oa => OptionMonad.fmap(oa)(f) }
-  override def pure[A](a: A): OptionT[M, A] = monad.pure(OptionMonad.pure(a))
-  override def joinWith[A, B, Z](fa: OptionT[M, A], fb: OptionT[M, B])(f: (A, B) => Z): OptionT[M, Z] =
-    monad.joinWith(fa, fb) { case (oa, ob) => OptionMonad.joinWith(oa, ob)(f) }
-  override def sequence[A, Z](fas: Seq[OptionT[M, A]])(f: Seq[A] => Z): OptionT[M, Z] =
-    monad.sequence(fas) { oas => OptionMonad.sequence(oas)(f) }
+class OptionTMonad[M[_]](
+  monad: Monad[M]
+) extends ComposeApplicative[Option, M](OptionMonad, monad)
+  with Monad[({type L[A] = OptionT[M, A]})#L] {
   override def bind[A, B](fa: OptionT[M, A])(f: A => OptionT[M, B]): OptionT[M, B] =
     monad.bind(fa) { oa =>
       oa match {
@@ -37,4 +33,9 @@ class OptionTMonad[M[_]](monad: Monad[M]) extends Monad[({type L[A] = OptionT[M,
         case Some(a) => f(a)
       }
     }
+}
+
+object OptionTMonadTrans extends MonadTrans[({type L[M[_], A] = OptionT[M, A]})#L] {
+  override def lift[M[_], A](monad: Monad[M], m: M[A]): OptionT[M, A] = monad.fmap(m) { Some(_) }
+  override def liftClass[M[_]](monad: Monad[M]): OptionTMonad[M] = new OptionTMonad[M](monad)
 }

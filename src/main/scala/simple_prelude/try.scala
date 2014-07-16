@@ -34,14 +34,10 @@ object TryMonad extends Monad[Try] {
     }
 }
 
-class TryTMonad[M[_]](monad: Monad[M]) extends Monad[({type L[A] = TryT[M, A]})#L] {
-  override def fmap[A, B](fa: TryT[M, A])(f: A => B): TryT[M, B] =
-    monad.fmap(fa) { oa => TryMonad.fmap(oa)(f) }
-  override def pure[A](a: A): TryT[M, A] = monad.pure(TryMonad.pure(a))
-  override def joinWith[A, B, Z](fa: TryT[M, A], fb: TryT[M, B])(f: (A, B) => Z): TryT[M, Z] =
-    monad.joinWith(fa, fb) { case (oa, ob) => TryMonad.joinWith(oa, ob)(f) }
-  override def sequence[A, Z](fas: Seq[TryT[M, A]])(f: Seq[A] => Z): TryT[M, Z] =
-    monad.sequence(fas) { oas => TryMonad.sequence(oas)(f) }
+class TryTMonad[M[_]](
+  monad: Monad[M]
+) extends ComposeApplicative[Try, M](TryMonad, monad)
+  with Monad[({type L[A] = TryT[M, A]})#L] {
   override def bind[A, B](fa: TryT[M, A])(f: A => TryT[M, B]): TryT[M, B] =
     monad.bind(fa) { oa =>
       oa match {
@@ -49,4 +45,9 @@ class TryTMonad[M[_]](monad: Monad[M]) extends Monad[({type L[A] = TryT[M, A]})#
         case Success(a) => f(a)
       }
     }
+}
+
+object TryTMonadTrans extends MonadTrans[({type L[M[_], A] = TryT[M, A]})#L] {
+  override def lift[M[_], A](monad: Monad[M], m: M[A]): TryT[M, A] = monad.fmap(m) { Success(_) }
+  override def liftClass[M[_]](monad: Monad[M]): TryTMonad[M] = new TryTMonad[M](monad)
 }

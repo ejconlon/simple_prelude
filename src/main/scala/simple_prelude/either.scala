@@ -32,16 +32,10 @@ class EitherMonad[E] extends Monad[({type L[A] = Either[E, A]})#L] {
     }
 }
 
-class EitherTMonad[E, M[_]](monad: Monad[M]) extends Monad[({type L[A] = EitherT[E, M, A]})#L] {
-  private[this] val eitherMonad = new EitherMonad[E]
-  override def fmap[A, B](fa: EitherT[E, M, A])(f: A => B): EitherT[E, M, B] =
-    monad.fmap(fa) { ea => eitherMonad.fmap(ea)(f) }
-  override def pure[A](a: A): EitherT[E, M, A] =
-    monad.pure(eitherMonad.pure(a))
-  override def joinWith[A, B, Z](fa: EitherT[E, M, A], fb: EitherT[E, M, B])(f: (A, B) => Z): EitherT[E, M, Z] =
-    monad.joinWith(fa, fb) { case (ea, eb) => eitherMonad.joinWith(ea, eb)(f) }
-  override def sequence[A, Z](fas: Seq[EitherT[E, M, A]])(f: Seq[A] => Z): EitherT[E, M, Z] =
-    monad.sequence(fas) { eas => eitherMonad.sequence(eas)(f) }
+class EitherTMonad[E, M[_]](
+  monad: Monad[M]
+) extends ComposeApplicative[({type L[A] = Either[E, A]})#L, M](new EitherMonad[E], monad)
+  with Monad[({type L[A] = EitherT[E, M, A]})#L] {
   override def bind[A, B](fa: EitherT[E, M, A])(f: A => EitherT[E, M, B]): EitherT[E, M, B] =
     monad.bind(fa) { ea =>
       ea match {

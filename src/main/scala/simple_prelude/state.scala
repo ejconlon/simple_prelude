@@ -30,3 +30,15 @@ class StateMonad[S] extends Monad[({type L[A] = State[S, A]})#L] {
     fb(s1)
   }
 }
+
+abstract class StateTMonad[S, M[_]](monad: Monad[M]) extends Monad[({type L[A] = StateT[S, M, A]})#L] {
+  override def fmap[A, B](fa: StateT[S, M, A])(f: A => B): StateT[S, M, B] = { (s: S) =>
+    monad.fmap(fa(s)) { case (a, t) => (f(a), t) }
+  }
+  override def pure[A](a: A): StateT[S, M, A] = { (s: S) => monad.pure((a, s)) }
+  override def joinWith[A, B, Z](fa: StateT[S, M, A], fb: StateT[S, M, B])(f: (A, B) => Z): StateT[S, M, Z] = { (s: S) =>
+    throw TodoException // how do you thread state???
+  }
+  override def sequence[A, Z](fas: Seq[StateT[S, M, A]])(f: Seq[A] => Z): StateT[S, M, Z]
+  override def bind[A, B](fa: StateT[S, M, A])(f: A => StateT[S, M, B]): StateT[S, M, B]
+}
